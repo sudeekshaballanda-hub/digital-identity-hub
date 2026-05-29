@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Digital Identity Hub | One Profile. All Links.</title>
+    <!-- Font Awesome 6 (Free) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <!-- QRCode Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --text-secondary: #475569;
+            --border: #e2e8f0;
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --danger: #ef4444;
+            --success: #10b981;
+            --accent: #8b5cf6;
+            --card-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.02);
+        }
+
+        body.dark {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border: #334155;
+            --card-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.2s, color 0.2s;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        button, .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+        }
+
+        button.outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        button.outline:hover {
+            background: var(--bg);
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Links list */
+        .link-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: var(--bg);
+            border-radius: 1rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .link-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .link-icon {
+            width: 32px;
+            font-size: 1.25rem;
+            text-align: center;
+        }
+
+        .badge-private {
+            font-size: 0.7rem;
+            background: var(--danger);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 1rem;
+            margin-left: 0.5rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 2rem;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .profile-pic {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            .navbar {
+                flex-direction: column;
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+    // ---------- Mock Backend (LocalStorage) ----------
+    const STORAGE_USERS = "dih_users";
+    const STORAGE_SESSION = "dih_session";
+
+    // Helper: generate short ID
+    function uid() {
+        return Date.now() + '-' + Math.random().toString(36).substr(2, 8);
+    }
+
+    // Default link types
+    const LINK_TEMPLATES = [
+        { id: "linkedin", label: "LinkedIn", icon: "fab fa-linkedin", placeholder: "https://linkedin.com/in/username" },
+        { id: "instagram", label: "Instagram", icon: "fab fa-instagram", placeholder: "https://instagram.com/username" },
+        { id: "facebook", label: "Facebook", icon: "fab fa-facebook", placeholder: "https://facebook.com/username" },
+        { id: "twitter", label: "X (Twitter)", icon: "fab fa-twitter", placeholder: "https://twitter.com/username" },
+        { id: "whatsapp", label: "WhatsApp", icon: "fab fa-whatsapp", placeholder: "https://wa.me/1234567890" },
+        { id: "github", label: "GitHub", icon: "fab fa-github", placeholder: "https://github.com/username" },
+        { id: "youtube", label: "YouTube", icon: "fab fa-youtube", placeholder: "https://youtube.com/@username" },
+        { id: "portfolio", label: "Portfolio", icon: "fas fa-briefcase", placeholder: "https://myportfolio.com" },
+        { id: "resume", label: "Resume/CV", icon: "fas fa-file-alt", placeholder: "https://drive.google.com/resume.pdf" }
+    ];
+
+    function getUsers() {
+        const raw = localStorage.getItem(STORAGE_USERS);
+        if (!raw) return [];
+        return JSON.parse(raw);
+    }
+
+    function saveUsers(users) {
+        localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
+    }
+
+    function getCurrentUser() {
+        const session = localStorage.getItem(STORAGE_SESSION);
+        if (!session) return null;
+        const users = getUsers();
+        return users.find(u => u.id === session) || null;
+    }
+
+    function setCurrentUser(userId) {
+        if (userId) localStorage.setItem(STORAGE_SESSION, userId);
+        else localStorage.removeItem(STORAGE_SESSION);
+    }
+
+    // Default demo user creation if empty
+    function initDemoUser() {
+        let users = getUsers();
+        if (users.length === 0) {
+            const demoUser = {
+                id: uid(),
+                name: "Alex Morgan",
+                username: "alexm",
+                email: "alex@example.com",
+                password: "demo123",
+                bio: "Product Designer & Creator. Building digital experiences.",
+                profession: "Product Designer",
+                college: "Stanford University",
+                company: "Creative Studio",
+                skills: "UI/UX, Figma, React, Branding",
+                photoInitials: "AM",
+                links: LINK_TEMPLATES.map(t => ({
+                    typeId: t.id,
+                    label: t.label,
+                    url: `https://${t.id}.com/demoalex`,
+                    visible: true,
+                    order: 0,
+                    icon: t.icon
+                })),
+                customLinks: [],
+                analytics: { views: 42, clicks: { "linkedin": 12, "github": 5 } },
+                createdAt: new Date().toISOString()
+            };
+            // add custom extra link
+            demoUser.customLinks.push({ id: uid(), label: "Medium Blog", url: "https://medium.com/@alexm", visible: true, icon: "fab fa-medium" });
+            users.push(demoUser);
+
+            const secondUser = {
+                id: uid(),
+                name: "Taylor Chen",
+                username: "taylorc",
+                email: "taylor@example.com",
+                password: "pass456",
+                bio: "Full-stack engineer & open source contributor.",
+                profession: "Software Engineer",
+                college: "MIT",
+                company: "TechFlow",
+                skills: "JavaScript, Python, Cloud",
+                photoInitials: "TC",
+                links: LINK_TEMPLATES.map(t => ({
+                    typeId: t.id,
+                    label: t.label,
+                    url: t.id === "github" ? "https://github.com/taylorchen" : `https://${t.id}.com/taylor`,
+                    visible: t.id !== "facebook" ? true : false,
+                    order: 0,
+                    icon: t.icon
+                })),
+                customLinks: [],
+                analytics: { views: 128, clicks: {} },
+                createdAt: new Date().toISOString()
+            };
+            users.push(secondUser);
+            saveUsers(users);
+        }
+    }
+
+    // Analytics update
+    function recordProfileView(profileUserId) {
+        const users = getUsers();
+        const idx = users.findIndex(u => u.id === profileUserId);
+        if (idx !== -1) {
+            users[idx].analytics = users[idx].analytics || { views: 0, clicks: {} };
+            users[idx].analytics.views = (users[idx].analytics.views || 0) + 1;
+            saveUsers(users);
+        }
+    }
+
+    function recordLinkClick(profileUserId, linkLabel) {
+        const users = getUsers();
+        const idx = users.findIndex(u => u.id === profileUserId);
+        if (idx !== -1) {
+            users[idx].analytics = users[idx].analytics || { views: 0, clicks: {} };
+            if (!users[idx].analytics.clicks) users[idx].analytics.clicks = {};
+            users[idx].analytics.clicks[linkLabel] = (users[idx].analytics.clicks[linkLabel] || 0) + 1;
+            saveUsers(users);
+        }
+    }
+
+    // vCard generator
+    function generateVCard(user) {
+        const fullName = user.name;
+        const tel = user.links?.find(l => l.typeId === "whatsapp" && l.visible)?.url || "";
+        const email = user.email;
+        let vcard = "BEGIN:VCARD\nVERSION:3.0\n";
+        vcard += `FN:${fullName}\n`;
+        if (email) vcard += `EMAIL:${email}\n`;
+        if (tel) vcard += `TEL:${tel}\n`;
+        vcard += `NOTE:Digital Identity Hub profile: ${window.location.origin}/?profile=${user.id}\n`;
+        vcard += "END:VCARD";
+        const blob = new Blob([vcard], { type: "text/vcard" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${user.username}.vcf`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Render main app (Router)
+    let currentView = "home"; // home, dashboard, profileView, searchResults
+    let selectedProfileId = null;
+    let searchQuery = "";
+
+    function render() {
+        const user = getCurrentUser();
+        const app = document.getElementById("app");
+        if (!user && currentView !== "home" && currentView !== "searchResults" && !selectedProfileId) {
+            // Not logged in, show login/register or searchable public directory
+            renderPublicInterface();
+        } else if (selectedProfileId) {
+            renderPublicProfile(selectedProfileId);
+        } else if (currentView === "dashboard" && user) {
+            renderDashboard(user);
+        } else if (currentView === "searchResults") {
+            renderSearchResults();
+        } else {
+            renderHomeSearch();
+        }
+    }
+
+    function renderPublicInterface() {
+        const user = getCurrentUser();
+        const app = document.getElementById("app");
+        app.innerHTML = `
+            <div class="navbar">
+                <div class="logo"><i class="fas fa-id-card"></i> Digital Identity Hub</div>
+                <div class="nav-buttons">
+                    <button id="themeToggleBtn" class="outline"><i class="fas fa-moon"></i> Theme</button>
+                    ${!user ? `<button id="loginBtn">Login</button><button id="registerBtn" class="outline">Register</button>` : `<button id="dashboardBtn">Dashboard</button><button id="logoutBtn" class="outline">Logout</button>`}
+                </div>
+            </div>
+            <div class="container">
+                <div class="card" style="text-align:center">
+                    <h1>Your Digital Identity, Unified 🔗</h1>
+                    <p style="margin:1rem 0">Search professionals by name, skill, company, or college. One profile with all links.</p>
+                    <div style="max-width:500px;margin:auto">
+                        <input type="text" id="globalSearchInput" class="search-input" placeholder="Search by name, username, profession, college, company, skills... e.g., 'Alex', 'designer', 'MIT'" autocomplete="off">
+                        <button id="globalSearchBtn" style="margin-top:1rem">Search People</button>
+                    </div>
+                </div>
+                ${!user ? `
+                <div class="grid-2">
+                    <div class="card"><h3>✨ Create Your Hub</h3><p>Manage all links, get QR code, track analytics.</p><button id="toRegisterBtn">Get Started →</button></div>
+                    <div class="card"><h3>🔍 Instant Discovery</h3><p>Anyone can find you by name or expertise.</p></div>
+                </div>
+                ` : `<div class="card"><h3>Welcome back, ${user.name}!</h3><button id="dashboardBtn">Go to Dashboard</button></div>`}
+            </div>
+            <footer>Digital Identity Hub — Complete online presence in one link.</footer>
+        `;
+        document.getElementById("themeToggleBtn")?.addEventListener("click", toggleTheme);
+        document.getElementById("loginBtn")?.addEventListener("click", () => showAuthModal("login"));
+        document.getElementById("registerBtn")?.addEventListener("click", () => showAuthModal("register"));
+        document.getElementById("toRegisterBtn")?.addEventListener("click", () => showAuthModal("register"));
+        document.getElementById("globalSearchBtn")?.addEventListener("click", () => performSearch());
+        document.getElementById("globalSearchInput")?.addEventListener("keypress", (e) => e.key === "Enter" && performSearch());
+        if (user) document.getElementById("dashboardBtn")?.addEventListener("click", () => { currentView = "dashboard"; selectedProfileId = null; render(); });
+        if (user) document.getElementById("logoutBtn")?.addEventListener("click", () => { setCurrentUser(null); currentView = "home"; selectedProfileId = null; render(); });
+    }
+
+    function performSearch() {
+        const input = document.getElementById("globalSearchInput")?.value || document.getElementById("searchInputDashboard")?.value;
+        if (!input) return;
+        searchQuery = input.trim().toLowerCase();
+        currentView = "searchResults";
+        selectedProfileId = null;
+        render();
+    }
+
+    function renderSearchResults() {
+        const users = getUsers();
+        const filtered = users.filter(u => {
+            const haystack = `${u.name} ${u.username} ${u.profession || ''} ${u.college || ''} ${u.company || ''} ${u.skills || ''}`.toLowerCase();
+            return haystack.includes(searchQuery);
+        });
+        const user = getCurrentUser();
+        const app = document.getElementById("app");
+        app.innerHTML = `
+            <div class="navbar">
+                <div class="logo"><i class="fas fa-id-card"></i> Identity Hub</div>
+                <div class="nav-buttons">
+                    <button id="homeBtn"><i class="fas fa-home"></i> Home</button>
+                    <button id="themeToggleBtn" class="outline"><i class="fas fa-moon"></i></button>
+                    ${user ? `<button id="dashboardBtn">Dashboard</button><button id="logoutBtn" class="outline">Logout</button>` : `<button id="loginBtn">Login</button>`}
+                </div>
+            </div>
+            <div class="container">
+                <h2>Search results for “${searchQuery}”</h2>
+                <div class="grid-2" style="margin-top:1.5rem">
+                    ${filtered.map(u => `
+                        <div class="card" style="cursor:pointer" data-id="${u.id}">
+                            <div style="display:flex;align-items:center;gap:1rem">
+                                <div class="profile-pic" style="width:50px;height:50px;font-size:1.5rem">${u.photoInitials || u.name.charAt(0)}</div>
+                                <div><strong>${u.name}</strong><br>${u.profession || 'Member'} · ${u.company || u.college || ''}</div>
+                            </div>
+                            <p style="margin-top:0.5rem">${u.bio?.substring(0,80) || ''}</p>
+                            <button class="viewProfileBtn" data-id="${u.id}">View Profile</button>
+                        </div>
+                    `).join('') || `<div class="card">No users found. Try another keyword.</div>`}
+                </div>
+            </div>
+        `;
+        document.querySelectorAll(".viewProfileBtn").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const id = btn.getAttribute("data-id");
+                selectedProfileId = id;
+                currentView = "profileView";
+                render();
+            });
+        });
+        document.querySelectorAll(".card[data-id]").forEach(card => {
+            card.addEventListener("click", (e) => {
+                if(e.target.tagName !== 'BUTTON') {
+                    selectedProfileId = card.getAttribute("data-id");
+                    currentView = "profileView";
+                    render();
+                }
+            });
+        });
+        document.getElementById("homeBtn")?.addEventListener("click", () => { currentView = "home"; selectedProfileId = null; render(); });
+        document.getElementById("themeToggleBtn")?.addEventListener("click", toggleTheme);
+        if (user) {
+            document.getElementById("dashboardBtn")?.addEventListener("click", () => { currentView = "dashboard"; selectedProfileId = null; render(); });
+            document.getElementById("logoutBtn")?.addEventListener("click", () => { setCurrentUser(null); currentView = "home"; render(); });
+        } else {
+            document.getElementById("loginBtn")?.addEventListener("click", () => showAuthModal("login"));
+        }
+    }
+
+    function renderPublicProfile(userId) {
+        const users = getUsers();
+        const profileUser = users.find(u => u.id === userId);
+        if (!profileUser) { alert("Profile not found"); currentView = "home"; render(); return; }
+        recordProfileView(userId);
+        const allLinks = [...profileUser.links, ...(profileUser.customLinks || [])].filter(l => l.visible).sort((a,b)=> (a.order||0)-(b.order||0));
+        const app = document.getElementById("app");
+        app.innerHTML = `
+            <div class="navbar">
+                <div class="logo">🔍 Digital Identity Hub</div>
+                <div class="nav-buttons">
+                    <button id="homeBtn">Home</button>
+                    <button id="themeToggleBtn" class="outline"><i class="fas fa-moon"></i></button>
+                    ${getCurrentUser() ? `<button id="dashboardBtn">Dashboard</button>` : `<button id="loginBtn">Login</button>`}
+                </div>
+            </div>
+            <div class="container">
+                <div class="card" style="text-align:center">
+                    <div style="display:flex;flex-wrap:wrap;gap:2rem;justify-content:center">
+                        <div><div class="profile-pic" style="width:100px;height:100px;font-size:2.5rem">${profileUser.photoInitials || profileUser.name.charAt(0)}</div></div>
+                        <div><h1>${profileUser.name}</h1><p>@${profileUser.username}</p><p>${profileUser.profession || ''} ${profileUser.company ? 'at '+profileUser.company : ''}</p><p><i class="fas fa-map-marker-alt"></i> ${profileUser.college || ''} ${profileUser.skills ? '| Skills: '+profileUser.skills : ''}</p><p>${profileUser.bio || ''}</p></div>
+                        <div class="qr-container"><div id="qrcode"></div><button id="saveVCardBtn" class="outline"><i class="fas fa-address-card"></i> Save Contact (vCard)</button></div>
+                    </div>
+                </div>
+                <div class="card"><h3>🔗 Connect & Links</h3>${allLinks.map(link => `<div class="link-item"><div class="link-left"><i class="${link.icon} link-icon"></i> <strong>${link.label}</strong></div><a href="${link.url}" target="_blank" class="track-link" data-label="${link.label}" data-url="${link.url}" style="background:var(--primary);padding:0.3rem 1rem;border-radius:2rem;color:white;text-decoration:none">Visit →</a></div>`).join('') || '<p>No public links shared.</p>'}</div>
+                <div class="card"><h3>📈 Profile Stats</h3><p>👁️ Profile views: ${profileUser.analytics?.views || 0}</p><p>🔗 Top clicks: ${Object.entries(profileUser.analytics?.clicks || {}).slice(0,3).map(([k,v])=>`${k}:${v}`).join(', ') || 'None yet'}</p></div>
+            </div>
+        `;
+        new QRCode(document.getElementById("qrcode"), { text: window.location.href.split('?')[0] + `?profile=${userId}`, width: 120, height: 120 });
+        document.getElementById("saveVCardBtn")?.addEventListener("click", () => generateVCard(profileUser));
+        document.querySelectorAll(".track-link").forEach(link => {
+            link.addEventListener("click", (e) => {
+                const label = link.getAttribute("data-label");
+                recordLinkClick(userId, label);
+            });
+        });
+        document.getElementById("homeBtn")?.addEventListener("click", () => { currentView = "home"; selectedProfileId = null; render(); });
+        document.getElementById("themeToggleBtn")?.addEventListener("click", toggleTheme);
+        if (getCurrentUser()) document.getElementById("dashboardBtn")?.addEventListener("click", () => { currentView = "dashboard"; selectedProfileId = null; render(); });
+        else document.getElementById("loginBtn")?.addEventListener("click", () => showAuthModal("login"));
+    }
+
+    function renderDashboard(user) {
+        const allLinksUnsorted = [...user.links, ...(user.customLinks || [])];
+        const renderLinks = () => `
+            ${allLinksUnsorted.map((link, idx) => `<div class="link-item"><div class="link-left"><i class="${link.icon}"></i> ${link.label} ${!link.visible ? '<span class="badge-private">Hidden</span>' : ''}</div><div><button class="toggleVisBtn" data-idx="${idx}">${link.visible ? 'Hide' : 'Show'}</button> <button class="deleteLinkBtn" data-idx="${idx}" ${link.typeId ? 'disabled' : ''} style="${link.typeId ? 'opacity:0.5' : ''}">🗑️</button></div></div>`).join('')}
+            <div><input id="customLabel" placeholder="Custom label" /><input id="customUrl" placeholder="https://..."/><button id="addCustomLink">+ Add Custom Link</button></div>
+        `;
+        const app = document.getElementById("app");
+        app.innerHTML = `
+            <div class="navbar"><div class="logo">📁 Dashboard</div><div class="nav-buttons"><button id="logoutBtn">Logout</button><button id="themeToggleBtn" class="outline">🌓 Theme</button><button id="viewPublicBtn">🔗 My Public Profile</button></div></div>
+            <div class="container"><div class="grid-2"><div class="card"><h2>👤 Profile Info</h2><input id="name" value="${user.name}" placeholder="Full Name"/><input id="username" value="${user.username}" placeholder="Username"/><input id="bio" value="${user.bio||''}" placeholder="Bio"/><input id="profession" value="${user.profession||''}" placeholder="Profession"/><input id="college" value="${user.college||''}" placeholder="College"/><input id="company" value="${user.company||''}" placeholder="Company"/><input id="skills" value="${user.skills||''}" placeholder="Skills (comma)"/><button id="updateProfileBtn">Update Profile</button></div><div class="card"><h2>🔗 Manage Links (Visibility & Order)</h2>${renderLinks()}</div></div><div class="card"><h3>📊 Analytics</h3><p>Profile Views: ${user.analytics?.views || 0}</p><p>Link Clicks: ${JSON.stringify(user.analytics?.clicks || {})}</p><button id="regenerateQrBtn">Show my QR Code</button><div id="qrDashboard"></div></div></div>`;
+        document.getElementById("updateProfileBtn")?.addEventListener("click", () => {
+            const usersUp = getUsers();
+            const idx = usersUp.findIndex(u => u.id === user.id);
+            if (idx !== -1) {
+                usersUp[idx].name = document.getElementById("name").value;
+                usersUp[idx].username = document.getElementById("username").value;
+                usersUp[idx].bio = document.getElementById("bio").value;
+                usersUp[idx].profession = document.getElementById("profession").value;
+                usersUp[idx].college = document.getElementById("college").value;
+                usersUp[idx].company = document.getElementById("company").value;
+                usersUp[idx].skills = document.getElementById("skills").value;
+                usersUp[idx].photoInitials = usersUp[idx].name.charAt(0).toUpperCase();
+                saveUsers(usersUp);
+                setCurrentUser(usersUp[idx].id);
+                alert("Profile updated");
+                renderDashboard(usersUp[idx]);
+            }
+        });
+        document.getElementById("addCustomLink")?.addEventListener("click", () => {
+            const label = document.getElementById("customLabel").value;
+            const url = document.getElementById("customUrl").value;
+            if (!label || !url) return alert("Fill both fields");
+            const usersUp = getUsers();
+            const uidx = usersUp.findIndex(u => u.id === user.id);
+            usersUp[uidx].customLinks.push({ id: uid(), label, url, visible: true, icon: "fas fa-link" });
+            saveUsers(usersUp);
+            renderDashboard(usersUp[uidx]);
+        });
+        document.querySelectorAll(".toggleVisBtn").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                const idx = parseInt(btn.getAttribute("data-idx"));
+                const usersUp = getUsers();
+                const uidx = usersUp.findIndex(u => u.id === user.id);
+                if (idx < usersUp[uidx].links.length) usersUp[uidx].links[idx].visible = !usersUp[uidx].links[idx].visible;
+                else usersUp[uidx].customLinks[idx - usersUp[uidx].links.length].visible = !usersUp[uidx].customLinks[idx - usersUp[uidx].links.length].visible;
+                saveUsers(usersUp);
+                renderDashboard(usersUp[uidx]);
+            });
+        });
+        document.getElementById("regenerateQrBtn")?.addEventListener("click", () => {
+            const div = document.getElementById("qrDashboard");
+            div.innerHTML = '<div id="newQR"></div>';
+            new QRCode(document.getElementById("newQR"), { text: window.location.origin + `/?profile=${user.id}`, width: 150, height: 150 });
+        });
+        document.getElementById("logoutBtn")?.addEventListener("click", () => { setCurrentUser(null); currentView = "home"; render(); });
+        document.getElementById("themeToggleBtn")?.addEventListener("click", toggleTheme);
+        document.getElementById("viewPublicBtn")?.addEventListener("click", () => { selectedProfileId = user.id; currentView = "profileView"; render(); });
+    }
+
+    function showAuthModal(type) {
+        const email = prompt(`${type === "login" ? "Login" : "Register"} Email:`);
+        const pass = prompt("Password:");
+        if (!email || !pass) return;
+        let users = getUsers();
+        if (type === "login") {
+            const found = users.find(u => u.email === email && u.password === pass);
+            if (found) { setCurrentUser(found.id); currentView = "dashboard"; selectedProfileId = null; render(); }
+            else alert("Invalid credentials");
+        } else {
+            if (users.find(u => u.email === email)) alert("User exists");
+            else {
+                const newUser = { id: uid(), name: email.split('@')[0], username: email.split('@')[0], email, password: pass, bio: "", profession: "", college: "", company: "", skills: "", photoInitials: email[0].toUpperCase(), links: LINK_TEMPLATES.map(t => ({ ...t, url: "", visible: true, order: 0 })), customLinks: [], analytics: { views: 0, clicks: {} }, createdAt: new Date().toISOString() };
+                users.push(newUser);
+                saveUsers(users);
+                setCurrentUser(newUser.id);
+                currentView = "dashboard";
+                render();
+            }
+        }
+    }
+
+    function toggleTheme() { document.body.classList.toggle("dark"); localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light"); }
+    function loadTheme() { if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark"); }
+
+    initDemoUser();
+    loadTheme();
+    // Route by URL parameter ?profile=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const profileParam = urlParams.get("profile");
+    if (profileParam) { selectedProfileId = profileParam; currentView = "profileView"; }
+    render();
+    window.addEventListener("popstate", () => { const newParam = new URLSearchParams(window.location.search).get("profile"); if (newParam) { selectedProfileId = newParam; currentView = "profileView"; render(); } else { currentView = "home"; selectedProfileId = null; render(); } });
+</script>
+</body>
+</html>
